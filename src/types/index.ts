@@ -109,4 +109,19 @@ export const DEFAULT_VIOLATION_SHIFTS: ViolationShift[] = [
   "Ca hành chính",
 ];
 
-export type AppTab = "history" | "violations";
+export type WorkingHoursFilterState = {
+  date: string;
+  areaId: "all" | AreaCode;
+  driverId: "all" | string;
+};
+
+export type DriverWorkingHoursRow = {
+  driverId: string;
+  driverName: string;
+  areaLabel: string;
+  dailyHours: number;
+  weeklyHours: number;
+  monthlyHours: number;
+};
+
+export type AppTab = "history" | "violations" | "workingHours";

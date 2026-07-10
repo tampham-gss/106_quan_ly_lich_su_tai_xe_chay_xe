@@ -8,6 +8,7 @@ import {
   SELECT_TRIGGER_BORDER_CLASS,
 } from "../styles/fieldStyles";
 import ViDateInput from "./ViDateInput";
+import ViDatePicker from "./ViDatePicker";
 
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -80,6 +81,39 @@ export function DateInput({ label, value, onChange, min, max, className, inputCl
       <ViDateInput
         aria-label={label}
         className={cn(FILTER_CONTROL_HEIGHT_CLASS, INPUT_FIELD_BORDER_CLASS, "px-3", inputClassName ?? "w-full")}
+        value={value}
+        min={min}
+        max={max}
+        onChange={onChange}
+      />
+    </FilterField>
+  );
+}
+
+type DatePickerInputProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  min?: string;
+  max?: string;
+  className?: string;
+  inputClassName?: string;
+};
+
+export function DatePickerInput({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  className,
+  inputClassName,
+}: DatePickerInputProps) {
+  return (
+    <FilterField label={label} className={className}>
+      <ViDatePicker
+        aria-label={label}
+        className={inputClassName ?? "w-full"}
         value={value}
         min={min}
         max={max}

@@ -2,6 +2,15 @@ import { useMemo } from "react";
 
 import type { Driver, Vehicle, ViolationFilterState } from "../types";
 import { AREA_OPTIONS } from "../types";
+import {
+  FILTER_AREA_FIELD_CLASS,
+  FILTER_BAR_LAYOUT_CLASS,
+  FILTER_CONTENT_FIELD_CLASS,
+  FILTER_DATE_FIELD_CLASS,
+  FILTER_DRIVER_FIELD_CLASS,
+  FILTER_STATUS_FIELD_CLASS,
+  FILTER_VEHICLE_FIELD_CLASS,
+} from "../styles/fieldStyles";
 import FilterAutocomplete from "./FilterAutocomplete";
 import { Card, CardContent, DateInput, FilterField } from "./ui";
 
@@ -61,22 +70,22 @@ export default function ViolationFilterCard({
   return (
     <Card>
       <CardContent>
-        <div className="grid min-w-0 grid-cols-2 items-end gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <div className={FILTER_BAR_LAYOUT_CLASS}>
           <DateInput
             label="Từ ngày"
-            className="min-w-0"
+            className={FILTER_DATE_FIELD_CLASS}
             value={filter.startDate}
             max={filter.endDate}
             onChange={(startDate) => onChange({ startDate })}
           />
           <DateInput
             label="Đến ngày"
-            className="min-w-0"
+            className={FILTER_DATE_FIELD_CLASS}
             value={filter.endDate}
             min={filter.startDate}
             onChange={(endDate) => onChange({ endDate })}
           />
-          <FilterField label="Khu vực" className="min-w-0">
+          <FilterField label="Khu vực" className={FILTER_AREA_FIELD_CLASS}>
             <FilterAutocomplete
               aria-label="Khu vực"
               value={filter.areaId}
@@ -91,7 +100,7 @@ export default function ViolationFilterCard({
               }
             />
           </FilterField>
-          <FilterField label="Tài xế" className="min-w-0">
+          <FilterField label="Tài xế" className={FILTER_DRIVER_FIELD_CLASS}>
             <FilterAutocomplete
               aria-label="Tài xế"
               value={filter.driverId}
@@ -101,7 +110,7 @@ export default function ViolationFilterCard({
               onChange={(driverId) => onChange({ driverId })}
             />
           </FilterField>
-          <FilterField label="Xe" className="min-w-0">
+          <FilterField label="Xe" className={FILTER_VEHICLE_FIELD_CLASS}>
             <FilterAutocomplete
               aria-label="Xe"
               value={filter.vehicleId}
@@ -111,7 +120,7 @@ export default function ViolationFilterCard({
               onChange={(vehicleId) => onChange({ vehicleId })}
             />
           </FilterField>
-          <FilterField label="Nội dung vi phạm" className="min-w-0">
+          <FilterField label="Nội dung vi phạm" className={FILTER_CONTENT_FIELD_CLASS}>
             <FilterAutocomplete
               aria-label="Nội dung vi phạm"
               value={filter.content}
@@ -121,7 +130,7 @@ export default function ViolationFilterCard({
               onChange={(content) => onChange({ content })}
             />
           </FilterField>
-          <FilterField label="Trạng thái" className="min-w-0">
+          <FilterField label="Trạng thái" className={FILTER_STATUS_FIELD_CLASS}>
             <FilterAutocomplete
               aria-label="Trạng thái"
               value={filter.result}

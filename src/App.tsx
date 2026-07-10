@@ -10,6 +10,8 @@ import ViolationFormModal, {
   type ViolationFormValues,
 } from "./components/ViolationFormModal";
 import ViolationTable from "./components/ViolationTable";
+import WorkingHoursFilterCard from "./components/WorkingHoursFilterCard";
+import WorkingHoursTable from "./components/WorkingHoursTable";
 import { FeaturePageShell, KpiCardsGrid, PageTitle, PrimaryButton } from "./components/ui";
 import {
   DEFAULT_ROTATIONS,
@@ -24,6 +26,7 @@ import type {
   HistoryFilterState,
   ViolationFilterState,
   ViolationRecord,
+  WorkingHoursFilterState,
 } from "./types";
 import {
   DEFAULT_VIOLATION_CONTENTS,
@@ -31,9 +34,11 @@ import {
   DEFAULT_VIOLATION_SHIFTS,
 } from "./types";
 import { currentMonthDateRange, currentWeekDateRange } from "./utils/dateUtils";
+import { buildDriverWorkingHoursRows } from "./utils/workingHoursUtils";
 
 const defaultHistoryRange = currentWeekDateRange();
 const defaultViolationRange = currentMonthDateRange();
+const defaultWorkingHoursDate = defaultHistoryRange.endDate;
 
 function createId(): string {
   return `vp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -60,6 +65,12 @@ export default function App() {
     result: "all",
   });
 
+  const [workingHoursFilter, setWorkingHoursFilter] = useState<WorkingHoursFilterState>({
+    date: defaultWorkingHoursDate,
+    areaId: "all",
+    driverId: "all",
+  });
+
   const [violations, setViolations] = useState<ViolationRecord[]>(DEFAULT_VIOLATIONS);
   const [contentOptions, setContentOptions] = useState<string[]>([...DEFAULT_VIOLATION_CONTENTS]);
   const [severityOptions, setSeverityOptions] = useState<string[]>([...DEFAULT_VIOLATION_SEVERITIES]);
@@ -78,6 +89,10 @@ export default function App() {
 
   const patchViolationFilter = useCallback((patch: Partial<ViolationFilterState>) => {
     setViolationFilter((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const patchWorkingHoursFilter = useCallback((patch: Partial<WorkingHoursFilterState>) => {
+    setWorkingHoursFilter((prev) => ({ ...prev, ...patch }));
   }, []);
 
   const plateByVehicleId = useMemo(
@@ -222,6 +237,11 @@ export default function App() {
     ];
   }, [filteredViolations]);
 
+  const workingHoursRows = useMemo(
+    () => buildDriverWorkingHoursRows(DEFAULT_ROTATIONS, workingHoursFilter),
+    [workingHoursFilter]
+  );
+
   const openCreateForm = () => {
     setFormMode("create");
     setEditingId(null);
@@ -292,7 +312,7 @@ export default function App() {
               areaLabelByVehicleId={areaLabelByVehicleId}
             />
           </>
-        ) : (
+        ) : activeTab === "violations" ? (
           <>
             <ViolationFilterCard
               filter={violationFilter}
@@ -318,6 +338,16 @@ export default function App() {
               onEdit={openEditForm}
               onDelete={handleDeleteViolation}
             />
+          </>
+        ) : (
+          <>
+            <WorkingHoursFilterCard
+              filter={workingHoursFilter}
+              drivers={MOCK_DRIVERS}
+              onChange={patchWorkingHoursFilter}
+            />
+
+            <WorkingHoursTable rows={workingHoursRows} />
           </>
         )}
       </CardWithTabs>

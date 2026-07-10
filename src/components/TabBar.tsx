@@ -4,6 +4,7 @@ import { cn } from "./ui";
 const TABS: { id: AppTab; label: string }[] = [
   { id: "history", label: "Lịch sử chạy xe" },
   { id: "violations", label: "Vi phạm" },
+  { id: "workingHours", label: "Thời gian làm việc" },
 ];
 
 type TabBarProps = {

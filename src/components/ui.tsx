@@ -7,6 +7,7 @@ import {
   INPUT_FIELD_BORDER_CLASS,
   SELECT_TRIGGER_BORDER_CLASS,
 } from "../styles/fieldStyles";
+import ViDateInput from "./ViDateInput";
 
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -76,27 +77,26 @@ type DateInputProps = {
 export function DateInput({ label, value, onChange, min, max, className, inputClassName }: DateInputProps) {
   return (
     <FilterField label={label} className={className}>
-      <input
-        type="date"
+      <ViDateInput
         aria-label={label}
         className={cn(FILTER_CONTROL_HEIGHT_CLASS, INPUT_FIELD_BORDER_CLASS, "px-3", inputClassName ?? "w-full")}
         value={value}
         min={min}
         max={max}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={onChange}
       />
     </FilterField>
   );
 }
 
 export function PageTitle({ children }: { children: ReactNode }) {
-  return <h1 className="text-2xl font-bold text-gray-900">{children}</h1>;
+  return <h1 className="shrink-0 text-2xl font-bold text-gray-900">{children}</h1>;
 }
 
 export function FeaturePageShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-full bg-gray-50 p-4">
-      <div className="mx-auto max-w-full space-y-4">{children}</div>
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-gray-50 p-4">
+      <div className="mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col gap-4">{children}</div>
     </div>
   );
 }
@@ -122,9 +122,15 @@ export type KpiItem = {
 
 const KPI_CARD_SHELL = "h-full w-full gap-0 rounded-lg border border-gray-200 bg-white p-0 shadow-none";
 
+function kpiGridColumnsClass(itemCount: number): string {
+  if (itemCount <= 2) return "grid-cols-2";
+  if (itemCount === 3) return "grid-cols-2 lg:grid-cols-3";
+  return "grid-cols-2 lg:grid-cols-4";
+}
+
 export function KpiCardsGrid({ items, className }: { items: KpiItem[]; className?: string }) {
   return (
-    <div className={cn("grid grid-cols-2 items-stretch gap-3 lg:grid-cols-3", className)}>
+    <div className={cn("grid w-full items-stretch gap-3", kpiGridColumnsClass(items.length), className)}>
       {items.map((item) => {
         const Icon = item.icon;
         return (

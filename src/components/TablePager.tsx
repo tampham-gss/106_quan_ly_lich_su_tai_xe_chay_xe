@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { LuChevronLeft, LuChevronRight, LuChevronsUpDown } from "react-icons/lu";
 
-import { Tooltip } from "./Tooltip";
 import { cn } from "./ui";
 
 export const DEFAULT_PAGE_SIZE = 10;
@@ -98,41 +97,35 @@ export default function TablePager({
       </p>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <Tooltip label="Chọn số dòng hiển thị mỗi trang" placement="bottom">
-          <div className="relative">
-            <select
-              aria-label="Số dòng mỗi trang"
-              title="Chọn số dòng hiển thị mỗi trang"
-              className="h-9 w-16 appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
-              value={pageSize}
-              onChange={(event) => handlePageSizeChange(event.target.value)}
-            >
-              {pageSizes.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-            <LuChevronsUpDown
-              className="pointer-events-none absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2 text-slate-400"
-              aria-hidden
-            />
-          </div>
-        </Tooltip>
+        <div className="relative">
+          <select
+            aria-label="Số dòng mỗi trang"
+            className="h-9 w-16 appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+            value={pageSize}
+            onChange={(event) => handlePageSizeChange(event.target.value)}
+          >
+            {pageSizes.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+          <LuChevronsUpDown
+            className="pointer-events-none absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden
+          />
+        </div>
 
         <div className="inline-flex items-stretch rounded-lg border border-slate-200 bg-white shadow-sm">
-          <Tooltip label="Trang trước" placement="bottom">
-            <button
-              type="button"
-              aria-label="Trang trước"
-              title="Trang trước"
-              disabled={page <= 1}
-              onClick={handlePrevious}
-              className="flex h-9 w-9 items-center justify-center rounded-l-lg border-r border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <LuChevronLeft className="h-4 w-4" aria-hidden />
-            </button>
-          </Tooltip>
+          <button
+            type="button"
+            aria-label="Trang trước"
+            disabled={page <= 1}
+            onClick={handlePrevious}
+            className="flex h-9 w-9 items-center justify-center rounded-l-lg border-r border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <LuChevronLeft className="h-4 w-4" aria-hidden />
+          </button>
 
           {pageItems.map((item, index) =>
             item === "ellipsis" ? (
@@ -144,38 +137,33 @@ export default function TablePager({
                 ...
               </span>
             ) : (
-              <Tooltip key={item} label={`Đến trang ${item}`} placement="bottom">
-                <button
-                  type="button"
-                  aria-label={`Trang ${item}`}
-                  title={`Đến trang ${item}`}
-                  aria-current={item === page ? "page" : undefined}
-                  onClick={() => onPageChange(item)}
-                  className={cn(
-                    "flex h-9 min-w-9 items-center justify-center border-r border-slate-200 px-2 text-sm font-medium transition-colors last:border-r-0",
-                    item === page
-                      ? "bg-blue-600 text-white"
-                      : "bg-white text-slate-700 hover:bg-slate-50"
-                  )}
-                >
-                  {item}
-                </button>
-              </Tooltip>
+              <button
+                key={item}
+                type="button"
+                aria-label={`Trang ${item}`}
+                aria-current={item === page ? "page" : undefined}
+                onClick={() => onPageChange(item)}
+                className={cn(
+                  "flex h-9 min-w-9 items-center justify-center border-r border-slate-200 px-2 text-sm font-medium transition-colors last:border-r-0",
+                  item === page
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                {item}
+              </button>
             )
           )}
 
-          <Tooltip label="Trang sau" placement="bottom">
-            <button
-              type="button"
-              aria-label="Trang sau"
-              title="Trang sau"
-              disabled={page >= totalPages}
-              onClick={handleNext}
-              className="flex h-9 w-9 items-center justify-center rounded-r-lg text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <LuChevronRight className="h-4 w-4" aria-hidden />
-            </button>
-          </Tooltip>
+          <button
+            type="button"
+            aria-label="Trang sau"
+            disabled={page >= totalPages}
+            onClick={handleNext}
+            className="flex h-9 w-9 items-center justify-center rounded-r-lg text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <LuChevronRight className="h-4 w-4" aria-hidden />
+          </button>
         </div>
       </div>
     </div>

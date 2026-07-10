@@ -6,22 +6,32 @@ import { buildDriverVehicleAssignments } from "../utils/buildDriverVehicleAssign
 import { formatViDate } from "../utils/dateUtils";
 import TablePager, { buildPaginationMeta, DEFAULT_PAGE_SIZE } from "./TablePager";
 import { getDriverSummaryRowTooltip } from "./Tooltip";
-import { Card, cn, tableBodyClass, tableHeaderCenterClass, tableHeaderClass } from "./ui";
+import { Card, cn } from "./ui";
 
-const summaryRowClass = "h-12 border-b border-slate-200 bg-white outline-none hover:bg-gray-50";
+const historyTableHeaderClass =
+  "px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase";
+
+const historyTableHeaderCenterClass =
+  "px-4 py-2 text-center text-xs font-semibold tracking-wide text-slate-600 uppercase";
+
+const historyTableBodyClass = "px-4 py-2 text-slate-700";
+
+const summaryRowClass = "h-10 border-b border-slate-200 bg-white outline-none hover:bg-gray-50";
 const summaryRowExpandedClass = "bg-white hover:bg-gray-100 border-b border-blue-200";
 const detailRowClass =
-  "h-11 border-b border-slate-200 border-l-4 border-l-blue-200 bg-slate-100 outline-none hover:bg-slate-200/70";
+  "h-9 border-b border-slate-200 border-l-4 border-l-blue-200 bg-slate-100 outline-none hover:bg-slate-200/70";
 const iconToggleClass = "inline-flex h-4 w-4 shrink-0 text-gray-600";
 
 type DrivingHistoryTableProps = {
   rotations: DailyRotation[];
   plateByVehicleId: Map<string, string>;
+  areaLabelByVehicleId: Map<string, string>;
 };
 
 type DriverSummary = {
   driverId: string;
   driverName: string;
+  areaLabel: string;
   plateNumbers: string[];
   startDate: string;
   endDate: string;
@@ -29,9 +39,25 @@ type DriverSummary = {
   hasMultipleVehicles: boolean;
 };
 
+function buildDriverAreaLabel(
+  detailRows: DriverVehicleAssignmentRow[],
+  areaLabelByVehicleId: Map<string, string>
+): string {
+  const labels = [
+    ...new Set(
+      detailRows
+        .map((row) => areaLabelByVehicleId.get(row.vehicleId))
+        .filter((label): label is string => Boolean(label))
+    ),
+  ];
+
+  return labels.length > 0 ? labels.join(", ") : "—";
+}
+
 function buildDriverSummaries(
   rotations: DailyRotation[],
-  plateByVehicleId: Map<string, string>
+  plateByVehicleId: Map<string, string>,
+  areaLabelByVehicleId: Map<string, string>
 ): DriverSummary[] {
   const assignments = buildDriverVehicleAssignments(rotations, plateByVehicleId);
   const byDriver = new Map<string, DriverVehicleAssignmentRow[]>();
@@ -58,6 +84,7 @@ function buildDriverSummaries(
       return {
         driverId,
         driverName: sortedRows[0].driverName,
+        areaLabel: buildDriverAreaLabel(sortedRows, areaLabelByVehicleId),
         plateNumbers,
         startDate,
         endDate,
@@ -68,14 +95,18 @@ function buildDriverSummaries(
     .sort((a, b) => a.driverName.localeCompare(b.driverName));
 }
 
-export default function DrivingHistoryTable({ rotations, plateByVehicleId }: DrivingHistoryTableProps) {
+export default function DrivingHistoryTable({
+  rotations,
+  plateByVehicleId,
+  areaLabelByVehicleId,
+}: DrivingHistoryTableProps) {
   const [expandedDrivers, setExpandedDrivers] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const summaries = useMemo(
-    () => buildDriverSummaries(rotations, plateByVehicleId),
-    [rotations, plateByVehicleId]
+    () => buildDriverSummaries(rotations, plateByVehicleId, areaLabelByVehicleId),
+    [rotations, plateByVehicleId, areaLabelByVehicleId]
   );
 
   const pagination = useMemo(
@@ -118,19 +149,25 @@ export default function DrivingHistoryTable({ rotations, plateByVehicleId }: Dri
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50">
-            <tr>
-              <th className={tableHeaderClass}>Tài xế</th>
-              <th className={tableHeaderClass}>Xe</th>
-              <th className={tableHeaderClass}>Từ ngày</th>
-              <th className={tableHeaderClass}>Đến ngày</th>
-              <th className={cn(tableHeaderCenterClass, "w-12")} aria-hidden />
-            </tr>
-          </thead>
-          <tbody>
+    <section className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <table className="w-full table-fixed border-collapse text-sm">
+        <colgroup>
+          <col className="w-[34%]" />
+          <col className="w-[28%]" />
+          <col className="w-[16%]" />
+          <col className="w-[16%]" />
+          <col className="w-[6%]" />
+        </colgroup>
+        <thead className="border-b border-gray-200 bg-gray-50">
+          <tr>
+            <th className={historyTableHeaderClass}>Tài xế</th>
+            <th className={historyTableHeaderClass}>Xe</th>
+            <th className={historyTableHeaderClass}>Từ ngày</th>
+            <th className={historyTableHeaderClass}>Đến ngày</th>
+            <th className={cn(historyTableHeaderCenterClass, "w-12")} aria-hidden />
+          </tr>
+        </thead>
+        <tbody>
             {paginatedSummaries.map((summary) => {
               const isExpanded = summary.hasMultipleVehicles && expandedDrivers.has(summary.driverId);
               const rowTooltip = summary.hasMultipleVehicles
@@ -167,13 +204,20 @@ export default function DrivingHistoryTable({ rotations, plateByVehicleId }: Dri
                         : undefined
                     }
                   >
-                    <td className={cn(tableBodyClass, "font-semibold text-gray-900")}>
-                      {summary.driverName}
+                    <td className={historyTableBodyClass}>
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 font-semibold text-gray-900">
+                        <span className="truncate">{summary.driverName}</span>
+                        <span className="shrink-0 text-xs font-normal text-gray-500">{summary.areaLabel}</span>
+                      </div>
                     </td>
-                    <td className={tableBodyClass}>{summary.plateNumbers.join(", ")}</td>
-                    <td className={cn(tableBodyClass, "tabular-nums")}>{formatViDate(summary.startDate)}</td>
-                    <td className={cn(tableBodyClass, "tabular-nums")}>{formatViDate(summary.endDate)}</td>
-                    <td className={cn(tableBodyClass, "text-center")}>
+                    <td className={cn(historyTableBodyClass, "break-words")}>{summary.plateNumbers.join(", ")}</td>
+                    <td className={cn(historyTableBodyClass, "tabular-nums whitespace-nowrap")}>
+                      {formatViDate(summary.startDate)}
+                    </td>
+                    <td className={cn(historyTableBodyClass, "tabular-nums whitespace-nowrap")}>
+                      {formatViDate(summary.endDate)}
+                    </td>
+                    <td className={cn(historyTableBodyClass, "text-center")}>
                       {summary.hasMultipleVehicles ? (
                         isExpanded ? (
                           <LuChevronUp className={iconToggleClass} aria-hidden />
@@ -187,29 +231,31 @@ export default function DrivingHistoryTable({ rotations, plateByVehicleId }: Dri
                   {summary.hasMultipleVehicles && isExpanded
                     ? summary.detailRows.map((row) => (
                         <tr key={row.id} className={detailRowClass}>
-                          <td className={tableBodyClass} />
-                          <td className={cn(tableBodyClass, "pl-8 text-gray-800")}>{row.plateNumber}</td>
-                          <td className={cn(tableBodyClass, "tabular-nums text-gray-700")}>
+                          <td className={historyTableBodyClass} />
+                          <td className={cn(historyTableBodyClass, "break-words pl-8 text-gray-800")}>
+                            {row.plateNumber}
+                          </td>
+                          <td className={cn(historyTableBodyClass, "tabular-nums whitespace-nowrap text-gray-700")}>
                             {formatViDate(row.startDate)}
                           </td>
-                          <td className={cn(tableBodyClass, "tabular-nums text-gray-700")}>
+                          <td className={cn(historyTableBodyClass, "tabular-nums whitespace-nowrap text-gray-700")}>
                             {formatViDate(row.endDate)}
                           </td>
-                          <td className={tableBodyClass} />
+                          <td className={historyTableBodyClass} />
                         </tr>
                       ))
                     : null}
                 </Fragment>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+        </tbody>
+      </table>
 
       <TablePager
         pagination={pagination}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
+        className="px-4 py-3 sm:px-5"
         ariaLabel="Phân trang lịch sử chạy xe"
       />
     </section>

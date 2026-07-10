@@ -1,4 +1,4 @@
-import type { DailyRotation, Driver, TripRecord, Vehicle, ViolationRecord } from "../types";
+import type { AreaCode, DailyRotation, Driver, TripRecord, Vehicle, ViolationRecord } from "../types";
 
 export const MOCK_DRIVERS: Driver[] = [
   { id: "d1", name: "Nguyễn Văn An" },
@@ -33,14 +33,26 @@ export const MOCK_VEHICLES: Vehicle[] = [
   { id: "v15", plateNumber: "29H-99012", vehicleType: "Tải nhẹ", area: "CLO", areaLabel: "CLO" },
 ];
 
-const ROUTES = [
-  "Kho Bình Dương → Kho Q.7",
-  "Kho Q.12 → Kho Long An",
-  "Kho Hải Phòng → Cảng Lạch Huyện",
-  "Kho CLO → Kho Thuận An",
-  "Kho Q.9 → Hub Gò Vấp",
-  "Kho Đồng Nai → Kho Bình Thạnh",
-];
+const ROUTES_BY_AREA: Record<AreaCode, string[]> = {
+  HCM: [
+    "Kho Bình Dương → Kho Q.7",
+    "Kho Q.12 → Kho Long An",
+    "Kho Q.9 → Hub Gò Vấp",
+    "Kho Đồng Nai → Kho Bình Thạnh",
+  ],
+  HAI_PHONG: [
+    "Kho Hải Phòng → Cảng Lạch Huyện",
+    "Kho Hải Phòng → KCN Tràng Duệ",
+    "Cảng Lạch Huyện → Kho Dương Kinh",
+    "Kho An Dương → Kho Hải An",
+  ],
+  CLO: [
+    "Kho CLO → Kho Thuận An",
+    "Kho CLO → Kho Bình Dương",
+    "Kho Thuận An → Hub Dĩ An",
+    "Kho CLO → KCN VSIP",
+  ],
+};
 
 type DriverPeriod = {
   driverId: string;
@@ -48,17 +60,18 @@ type DriverPeriod = {
   endDate: string;
 };
 
+/** Mỗi xe thuộc một khu vực; tài xế trong lịch chỉ được gán xe cùng khu vực. */
 const VEHICLE_SCHEDULES: Record<string, DriverPeriod[]> = {
   v1: [
     { driverId: "d1", startDate: "2026-07-01", endDate: "2026-07-05" },
     { driverId: "d2", startDate: "2026-07-07", endDate: "2026-07-10" },
     { driverId: "d1", startDate: "2026-07-11", endDate: "2026-07-14" },
   ],
-  v2: [{ driverId: "d3", startDate: "2026-07-01", endDate: "2026-07-15" }],
+  v2: [{ driverId: "d5", startDate: "2026-07-01", endDate: "2026-07-15" }],
   v3: [
-    { driverId: "d4", startDate: "2026-07-01", endDate: "2026-07-04" },
-    { driverId: "d5", startDate: "2026-07-07", endDate: "2026-07-11" },
-    { driverId: "d4", startDate: "2026-07-12", endDate: "2026-07-15" },
+    { driverId: "d9", startDate: "2026-07-01", endDate: "2026-07-04" },
+    { driverId: "d10", startDate: "2026-07-07", endDate: "2026-07-11" },
+    { driverId: "d9", startDate: "2026-07-12", endDate: "2026-07-15" },
   ],
   v4: [
     { driverId: "d6", startDate: "2026-07-02", endDate: "2026-07-06" },
@@ -66,20 +79,20 @@ const VEHICLE_SCHEDULES: Record<string, DriverPeriod[]> = {
   ],
   v5: [{ driverId: "d8", startDate: "2026-07-01", endDate: "2026-07-12" }],
   v6: [
-    { driverId: "d2", startDate: "2026-07-01", endDate: "2026-07-03" },
-    { driverId: "d3", startDate: "2026-07-04", endDate: "2026-07-08" },
-    { driverId: "d2", startDate: "2026-07-09", endDate: "2026-07-14" },
+    { driverId: "d3", startDate: "2026-07-01", endDate: "2026-07-03" },
+    { driverId: "d4", startDate: "2026-07-04", endDate: "2026-07-08" },
+    { driverId: "d3", startDate: "2026-07-09", endDate: "2026-07-14" },
   ],
-  v7: [{ driverId: "d5", startDate: "2026-07-05", endDate: "2026-07-15" }],
+  v7: [{ driverId: "d4", startDate: "2026-07-05", endDate: "2026-07-15" }],
   v8: [
     { driverId: "d1", startDate: "2026-07-01", endDate: "2026-07-02" },
-    { driverId: "d6", startDate: "2026-07-03", endDate: "2026-07-07" },
-    { driverId: "d7", startDate: "2026-07-08", endDate: "2026-07-15" },
+    { driverId: "d2", startDate: "2026-07-03", endDate: "2026-07-07" },
+    { driverId: "d5", startDate: "2026-07-08", endDate: "2026-07-15" },
   ],
   v9: [{ driverId: "d9", startDate: "2026-07-01", endDate: "2026-07-15" }],
   v10: [
     { driverId: "d1", startDate: "2026-07-01", endDate: "2026-07-06" },
-    { driverId: "d4", startDate: "2026-07-08", endDate: "2026-07-14" },
+    { driverId: "d10", startDate: "2026-07-08", endDate: "2026-07-14" },
   ],
   v11: [
     { driverId: "d2", startDate: "2026-07-01", endDate: "2026-07-05" },
@@ -94,7 +107,7 @@ const VEHICLE_SCHEDULES: Record<string, DriverPeriod[]> = {
   v14: [{ driverId: "d3", startDate: "2026-07-02", endDate: "2026-07-14" }],
   v15: [
     { driverId: "d4", startDate: "2026-07-01", endDate: "2026-07-04" },
-    { driverId: "d2", startDate: "2026-07-06", endDate: "2026-07-10" },
+    { driverId: "d11", startDate: "2026-07-06", endDate: "2026-07-10" },
     { driverId: "d11", startDate: "2026-07-11", endDate: "2026-07-15" },
   ],
 };
@@ -129,6 +142,8 @@ function buildTripsForDriver(
   tripIndex: number
 ): TripRecord[] {
   const driver = getDriver(driverId);
+  const vehicle = getVehicleById(vehicleId);
+  const routes = vehicle ? ROUTES_BY_AREA[vehicle.area] : ROUTES_BY_AREA.HCM;
   const dayNum = Number(date.slice(-2));
   const tripCount = dayNum % 3 === 0 ? 2 : 1;
   const trips: TripRecord[] = [];
@@ -143,7 +158,7 @@ function buildTripsForDriver(
       driverName: driver.name,
       startTime: `${String(startHour).padStart(2, "0")}:00`,
       endTime: `${String(endHour).padStart(2, "0")}:30`,
-      route: ROUTES[(dayNum + i) % ROUTES.length],
+      route: routes[(dayNum + i) % routes.length],
     });
   }
 
@@ -218,7 +233,7 @@ export const DEFAULT_VIOLATIONS: ViolationRecord[] = [
     violationDate: "2026-07-04",
     observationMethod: "Trực tiếp",
     vehicleId: "v6",
-    personnelName: "Trần Minh Bình",
+    personnelName: "Lê Hoàng Cường",
     content: "Vượt quá tốc độ cho phép",
     severity: "Nghiêm trọng",
     shift: "Ca 22h-06h",
@@ -229,7 +244,7 @@ export const DEFAULT_VIOLATIONS: ViolationRecord[] = [
     violationDate: "2026-07-05",
     observationMethod: "Online",
     vehicleId: "v3",
-    personnelName: "Phạm Đức Dũng",
+    personnelName: "Trịnh Văn Khôi",
     content: "Không bật đèn xi-nhan",
     severity: "Nhẹ",
     shift: "Ca hành chính",
@@ -251,7 +266,7 @@ export const DEFAULT_VIOLATIONS: ViolationRecord[] = [
     violationDate: "2026-07-07",
     observationMethod: "Online",
     vehicleId: "v11",
-    personnelName: "Trần Minh Bình",
+    personnelName: "Võ Thanh Em",
     content: "Vi phạm thời gian lái xe liên tục",
     severity: "Nặng",
     shift: "Ca 14h-22h",

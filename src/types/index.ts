@@ -76,9 +76,11 @@ export type ViolationRecord = {
 export type ViolationFilterState = {
   startDate: string;
   endDate: string;
+  areaId: "all" | AreaCode;
+  driverId: "all" | string;
   vehicleId: "all" | string;
+  content: "all" | string;
   result: "all" | ViolationResult;
-  keyword: string;
 };
 
 export const AREA_OPTIONS: { id: HistoryFilterState["areaId"]; label: string }[] = [

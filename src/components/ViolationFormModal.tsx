@@ -1,119 +1,16 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { LuPlus } from "react-icons/lu";
 
-import type {
-  ObservationMethod,
-  Vehicle,
-  ViolationRecord,
-  ViolationResult,
-} from "../types";
-import {
-  Card,
-  CardContent,
-  DateInput,
-  FilterField,
-  FilterSelect,
-  OutlineButton,
-  PrimaryButton,
-  cn,
-  inputClass,
-} from "./ui";
-
-type CreatableSelectProps = {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-  onOptionsChange: (options: string[]) => void;
-  placeholder?: string;
-  ariaLabel: string;
-};
-
-function CreatableSelect({
-  label,
-  value,
-  options,
-  onChange,
-  onOptionsChange,
-  placeholder,
-  ariaLabel,
-}: CreatableSelectProps) {
-  const [customMode, setCustomMode] = useState(false);
-  const [customValue, setCustomValue] = useState("");
-
-  const allOptions = useMemo(() => {
-    const merged = [...options];
-    if (value && !merged.includes(value)) merged.push(value);
-    return merged;
-  }, [options, value]);
-
-  useEffect(() => {
-    if (value && !options.includes(value)) {
-      setCustomMode(true);
-      setCustomValue(value);
-    }
-  }, [options, value]);
-
-  const handleSelectChange = (next: string) => {
-    if (next === "__custom__") {
-      setCustomMode(true);
-      setCustomValue(value);
-      return;
-    }
-    setCustomMode(false);
-    onChange(next);
-  };
-
-  const applyCustomValue = () => {
-    const trimmed = customValue.trim();
-    if (!trimmed) return;
-    if (!options.includes(trimmed)) onOptionsChange([...options, trimmed]);
-    onChange(trimmed);
-    setCustomMode(false);
-  };
-
-  return (
-    <FilterField label={label}>
-      {customMode ? (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            aria-label={ariaLabel}
-            className={cn(inputClass, "flex-1")}
-            value={customValue}
-            placeholder={placeholder ?? "Nhập giá trị mới..."}
-            onChange={(event) => setCustomValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applyCustomValue();
-              }
-            }}
-          />
-          <OutlineButton onClick={applyCustomValue}>Áp dụng</OutlineButton>
-          <OutlineButton
-            onClick={() => {
-              setCustomMode(false);
-              if (options.length > 0) onChange(options[0]);
-            }}
-          >
-            Hủy
-          </OutlineButton>
-        </div>
-      ) : (
-        <FilterSelect
-          aria-label={ariaLabel}
-          value={value || allOptions[0] || ""}
-          items={[
-            ...allOptions.map((option) => ({ id: option, label: option })),
-            { id: "__custom__", label: "+ Nhập thêm..." },
-          ]}
-          onChange={handleSelectChange}
-        />
-      )}
-    </FilterField>
-  );
-}
+import type { Driver, ObservationMethod, Vehicle, ViolationRecord, ViolationResult } from "../types";
+import AutocompleteField from "./AutocompleteField";
+import CreatableLookupField from "./CreatableLookupField";
+import ModalButton from "./modal/ModalButton";
+import ModalFieldError from "./modal/ModalFieldError";
+import ModalFieldLabel from "./modal/ModalFieldLabel";
+import ModalFooter from "./modal/ModalFooter";
+import ModalHeader from "./modal/ModalHeader";
+import ViDateInput from "./ViDateInput";
+import { cn } from "./ui";
+import { MODAL_BODY_CLASS, MODAL_CONTAINER_CLASS, MODAL_NATIVE_INPUT_CLASS } from "../styles/modalStyles";
 
 export type ViolationFormValues = Omit<ViolationRecord, "id">;
 
@@ -121,6 +18,7 @@ type ViolationFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   initialValues: ViolationFormValues;
+  drivers: Driver[];
   vehicles: Vehicle[];
   contentOptions: string[];
   severityOptions: string[];
@@ -142,10 +40,26 @@ const RESULT_ITEMS = [
   { id: "Đã xử lý", label: "Đã xử lý" },
 ];
 
+type FieldKey = "driver" | "vehicleId" | "violationDate" | "content";
+
+type FormErrors = Partial<Record<FieldKey, string>>;
+
+function validateForm(form: ViolationFormValues, selectedDriverId: string): FormErrors {
+  const errors: FormErrors = {};
+
+  if (!selectedDriverId) errors.driver = "Vui lòng chọn tài xế";
+  if (!form.vehicleId) errors.vehicleId = "Vui lòng chọn phương tiện";
+  if (!form.violationDate) errors.violationDate = "Vui lòng chọn ngày vi phạm";
+  if (!form.content.trim()) errors.content = "Vui lòng nhập nội dung vi phạm";
+
+  return errors;
+}
+
 export default function ViolationFormModal({
   open,
   mode,
   initialValues,
+  drivers,
   vehicles,
   contentOptions,
   severityOptions,
@@ -158,30 +72,56 @@ export default function ViolationFormModal({
 }: ViolationFormModalProps) {
   const titleId = useId();
   const [form, setForm] = useState<ViolationFormValues>(initialValues);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    if (open) setForm(initialValues);
-  }, [open, initialValues]);
+    if (!open) return;
+    setForm(initialValues);
+    const matchedDriver = drivers.find((driver) => driver.name === initialValues.personnelName);
+    setSelectedDriverId(matchedDriver?.id ?? "");
+    setSubmitted(false);
+  }, [open, initialValues, drivers]);
 
-  const vehicleItems = useMemo(
+  const driverOptions = useMemo(
+    () => drivers.map((driver) => ({ id: driver.id, label: driver.name })),
+    [drivers]
+  );
+
+  const vehicleOptions = useMemo(
     () =>
       vehicles.map((vehicle) => ({
         id: vehicle.id,
-        label: `${vehicle.plateNumber} — ${vehicle.vehicleType} (${vehicle.areaLabel})`,
+        label: vehicle.plateNumber,
+        sublabel: vehicle.vehicleType,
       })),
     [vehicles]
   );
 
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === form.vehicleId);
+  const driverHint = selectedVehicle ? `Khu vực: ${selectedVehicle.areaLabel}` : undefined;
+  const vehicleHint = selectedVehicle ? `Loại: ${selectedVehicle.vehicleType}` : undefined;
+  const errors = useMemo(() => validateForm(form, selectedDriverId), [form, selectedDriverId]);
+
+  const showError = (field: FieldKey) => submitted && !!errors[field];
 
   const patchForm = (patch: Partial<ViolationFormValues>) => {
     setForm((prev) => ({ ...prev, ...patch }));
   };
 
-  const handleSubmit = () => {
-    if (!form.violationDate || !form.vehicleId || !form.personnelName.trim() || !form.content.trim()) {
-      return;
-    }
+  const handleDriverChange = (driverId: string) => {
+    setSelectedDriverId(driverId);
+    const driver = drivers.find((item) => item.id === driverId);
+    patchForm({ personnelName: driver?.name ?? "" });
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setSubmitted(true);
+
+    const nextErrors = validateForm(form, selectedDriverId);
+    if (Object.keys(nextErrors).length > 0) return;
+
     onSubmit({
       ...form,
       personnelName: form.personnelName.trim(),
@@ -203,128 +143,121 @@ export default function ViolationFormModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl"
+        className={MODAL_CONTAINER_CLASS}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-gray-200 px-5 py-4">
-          <h2 id={titleId} className="text-lg font-semibold text-gray-900">
-            {mode === "create" ? "Thêm vi phạm" : "Sửa vi phạm"}
-          </h2>
-        </div>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <ModalHeader
+            titleId={titleId}
+            title={mode === "create" ? "Thêm vi phạm" : "Chỉnh sửa vi phạm"}
+            onClose={onClose}
+          />
 
-        <Card className="border-0 shadow-none">
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <DateInput
-              label="Ngày vi phạm"
-              value={form.violationDate}
-              onChange={(violationDate) => patchForm({ violationDate })}
+          <div className={cn(MODAL_BODY_CLASS, "grid gap-4 sm:grid-cols-2")}>
+            <AutocompleteField
+              label="Tài xế"
+              required
+              value={selectedDriverId}
+              options={driverOptions}
+              placeholder="Chọn tài xế"
+              searchPlaceholder="Tìm tài xế..."
+              hint={driverHint}
+              error={errors.driver}
+              showError={showError("driver")}
+              onChange={handleDriverChange}
             />
 
-            <FilterField label="Hình thức quan sát">
-              <FilterSelect
-                aria-label="Hình thức quan sát"
-                value={form.observationMethod}
-                items={OBSERVATION_ITEMS}
-                onChange={(value) => patchForm({ observationMethod: value as ObservationMethod })}
-              />
-            </FilterField>
+            <AutocompleteField
+              label="Phương tiện"
+              required
+              value={form.vehicleId}
+              options={vehicleOptions}
+              placeholder="Chọn phương tiện"
+              searchPlaceholder="Tìm biển số..."
+              hint={vehicleHint}
+              error={errors.vehicleId}
+              showError={showError("vehicleId")}
+              onChange={(vehicleId) => patchForm({ vehicleId })}
+            />
 
-            <FilterField label="Số phương tiện">
-              <FilterSelect
-                aria-label="Số phương tiện"
-                value={form.vehicleId}
-                items={vehicleItems}
-                onChange={(vehicleId) => patchForm({ vehicleId })}
+            <div className="space-y-1.5">
+              <ModalFieldLabel required htmlFor="violation-date">
+                Ngày vi phạm
+              </ModalFieldLabel>
+              <ViDateInput
+                id="violation-date"
+                aria-label="Ngày vi phạm"
+                aria-invalid={showError("violationDate")}
+                className={cn(
+                  MODAL_NATIVE_INPUT_CLASS,
+                  showError("violationDate") && "border-red-400 focus:border-red-500 focus:ring-red-500/30"
+                )}
+                value={form.violationDate}
+                onChange={(violationDate) => patchForm({ violationDate })}
               />
-            </FilterField>
-
-            <FilterField label="Loại phương tiện">
-              <input
-                type="text"
-                aria-label="Loại phương tiện"
-                className={cn(inputClass, "bg-gray-50")}
-                value={selectedVehicle?.vehicleType ?? ""}
-                readOnly
-              />
-            </FilterField>
-
-            <FilterField label="Chi nhánh">
-              <input
-                type="text"
-                aria-label="Chi nhánh"
-                className={cn(inputClass, "bg-gray-50")}
-                value={selectedVehicle?.areaLabel ?? ""}
-                readOnly
-              />
-            </FilterField>
-
-            <FilterField label="Nhân sự vi phạm">
-              <input
-                type="text"
-                aria-label="Nhân sự vi phạm"
-                className={inputClass}
-                value={form.personnelName}
-                placeholder="Nhập tên nhân sự"
-                onChange={(event) => patchForm({ personnelName: event.target.value })}
-              />
-            </FilterField>
-
-            <div className="sm:col-span-2">
-              <CreatableSelect
-                label="Nội dung vi phạm"
-                ariaLabel="Nội dung vi phạm"
-                value={form.content}
-                options={contentOptions}
-                onChange={(content) => patchForm({ content })}
-                onOptionsChange={onContentOptionsChange}
-                placeholder="Nhập nội dung vi phạm mới..."
-              />
+              {showError("violationDate") ? <ModalFieldError message={errors.violationDate} /> : null}
             </div>
 
-            <CreatableSelect
+            <AutocompleteField
+              label="Hình thức quan sát"
+              value={form.observationMethod}
+              options={OBSERVATION_ITEMS}
+              placeholder="Chọn hình thức quan sát"
+              searchable={false}
+              onChange={(observationMethod) =>
+                patchForm({ observationMethod: observationMethod as ObservationMethod })
+              }
+            />
+
+            <CreatableLookupField
+              label="Nội dung vi phạm"
+              required
+              value={form.content}
+              options={contentOptions}
+              placeholder="Chọn nội dung vi phạm"
+              error={errors.content}
+              showError={showError("content")}
+              onChange={(content) => patchForm({ content })}
+              onOptionsChange={onContentOptionsChange}
+            />
+
+            <CreatableLookupField
               label="Phân loại lỗi"
-              ariaLabel="Phân loại lỗi"
               value={form.severity}
               options={severityOptions}
+              placeholder="Chọn phân loại lỗi"
               onChange={(severity) => patchForm({ severity })}
               onOptionsChange={onSeverityOptionsChange}
-              placeholder="Nhập phân loại lỗi mới..."
             />
 
-            <CreatableSelect
+            <CreatableLookupField
               label="Ca trực ghi nhận"
-              ariaLabel="Ca trực ghi nhận"
               value={form.shift}
               options={shiftOptions}
+              placeholder="Chọn ca trực ghi nhận"
               onChange={(shift) => patchForm({ shift })}
               onOptionsChange={onShiftOptionsChange}
-              placeholder="Nhập ca trực mới..."
             />
 
-            <FilterField label="Kết quả">
-              <FilterSelect
-                aria-label="Kết quả"
-                value={form.result}
-                items={RESULT_ITEMS}
-                onChange={(value) => patchForm({ result: value as ViolationResult })}
-              />
-            </FilterField>
-          </CardContent>
-        </Card>
+            <AutocompleteField
+              label="Trạng thái"
+              value={form.result}
+              options={RESULT_ITEMS}
+              placeholder="Chọn trạng thái"
+              searchable={false}
+              onChange={(result) => patchForm({ result: result as ViolationResult })}
+            />
+          </div>
 
-        <div className="flex justify-end gap-2 border-t border-gray-200 px-5 py-4">
-          <OutlineButton onClick={onClose}>Hủy</OutlineButton>
-          <PrimaryButton onClick={handleSubmit}>
-            {mode === "create" ? (
-              <span className="inline-flex items-center gap-1.5">
-                <LuPlus className="h-4 w-4" aria-hidden />
-                Thêm
-              </span>
-            ) : (
-              "Lưu"
-            )}
-          </PrimaryButton>
-        </div>
+          <ModalFooter>
+            <ModalButton variant="cancel" type="button" showIcon={false} onClick={onClose}>
+              Hủy
+            </ModalButton>
+            <ModalButton variant="primary" type="submit">
+              {mode === "create" ? "Thêm" : "Lưu"}
+            </ModalButton>
+          </ModalFooter>
+        </form>
       </div>
     </div>
   );
@@ -337,8 +270,8 @@ export function createEmptyViolationForm(today: string): ViolationFormValues {
     vehicleId: "",
     personnelName: "",
     content: "",
-    severity: "Nhẹ",
-    shift: "Ca 06h-14h",
+    severity: "",
+    shift: "",
     result: "Chưa xử lý",
   };
 }

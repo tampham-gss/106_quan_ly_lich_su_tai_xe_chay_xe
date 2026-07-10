@@ -14,6 +14,7 @@ import { FeaturePageShell, KpiCardsGrid, PageTitle, PrimaryButton } from "./comp
 import {
   DEFAULT_ROTATIONS,
   DEFAULT_VIOLATIONS,
+  getVehicleById,
   MOCK_DRIVERS,
   MOCK_VEHICLES,
 } from "./data/mockData";
@@ -52,9 +53,11 @@ export default function App() {
   const [violationFilter, setViolationFilter] = useState<ViolationFilterState>({
     startDate: defaultViolationRange.startDate,
     endDate: defaultViolationRange.endDate,
+    areaId: "all",
+    driverId: "all",
     vehicleId: "all",
+    content: "all",
     result: "all",
-    keyword: "",
   });
 
   const [violations, setViolations] = useState<ViolationRecord[]>(DEFAULT_VIOLATIONS);
@@ -79,6 +82,11 @@ export default function App() {
 
   const plateByVehicleId = useMemo(
     () => new Map(MOCK_VEHICLES.map((vehicle) => [vehicle.id, vehicle.plateNumber])),
+    []
+  );
+
+  const areaLabelByVehicleId = useMemo(
+    () => new Map(MOCK_VEHICLES.map((vehicle) => [vehicle.id, vehicle.areaLabel])),
     []
   );
 
@@ -135,20 +143,20 @@ export default function App() {
         icon: LuClipboardList,
         iconClass: "text-slate-500",
       },
-      {
-        key: "records",
-        label: "Ngày ghi nhận",
-        value: filteredRotations.length,
-        icon: LuClipboardList,
-        valueClass: "text-emerald-700",
-        iconClass: "text-emerald-500",
-      },
     ],
-    [filteredRotations.length, uniqueDriversInHistory, uniqueVehiclesInHistory]
+    [uniqueDriversInHistory, uniqueVehiclesInHistory]
   );
 
+  const violationContentFilterOptions = useMemo(() => {
+    const fromRecords = violations.map((row) => row.content).filter(Boolean);
+    return [...new Set([...contentOptions, ...fromRecords])].sort((a, b) => a.localeCompare(b));
+  }, [contentOptions, violations]);
+
   const filteredViolations = useMemo(() => {
-    const keyword = violationFilter.keyword.trim().toLowerCase();
+    const selectedDriver =
+      violationFilter.driverId !== "all"
+        ? MOCK_DRIVERS.find((driver) => driver.id === violationFilter.driverId)
+        : undefined;
 
     return violations.filter((row) => {
       if (row.violationDate < violationFilter.startDate || row.violationDate > violationFilter.endDate) {
@@ -160,9 +168,15 @@ export default function App() {
       if (violationFilter.result !== "all" && row.result !== violationFilter.result) {
         return false;
       }
-      if (keyword) {
-        const haystack = `${row.personnelName} ${row.content}`.toLowerCase();
-        if (!haystack.includes(keyword)) return false;
+      if (violationFilter.content !== "all" && row.content !== violationFilter.content) {
+        return false;
+      }
+      if (violationFilter.areaId !== "all") {
+        const vehicle = getVehicleById(row.vehicleId);
+        if (!vehicle || vehicle.area !== violationFilter.areaId) return false;
+      }
+      if (selectedDriver && row.personnelName !== selectedDriver.name) {
+        return false;
       }
       return true;
     });
@@ -211,10 +225,7 @@ export default function App() {
   const openCreateForm = () => {
     setFormMode("create");
     setEditingId(null);
-    setFormInitialValues({
-      ...createEmptyViolationForm(violationFilter.endDate),
-      vehicleId: MOCK_VEHICLES[0]?.id ?? "",
-    });
+    setFormInitialValues(createEmptyViolationForm(violationFilter.endDate));
     setFormOpen(true);
   };
 
@@ -254,6 +265,11 @@ export default function App() {
       ? MOCK_VEHICLES
       : MOCK_VEHICLES.filter((vehicle) => vehicle.area === (historyFilter.areaId as AreaCode));
 
+  const violationAreaVehicles =
+    violationFilter.areaId === "all"
+      ? MOCK_VEHICLES
+      : MOCK_VEHICLES.filter((vehicle) => vehicle.area === (violationFilter.areaId as AreaCode));
+
   return (
     <FeaturePageShell>
       <PageTitle>Quản lý hoạt động tài xế</PageTitle>
@@ -268,20 +284,25 @@ export default function App() {
               onChange={patchHistoryFilter}
             />
 
-            <KpiCardsGrid items={historyKpiItems} className="lg:grid-cols-3" />
+            <KpiCardsGrid items={historyKpiItems} />
 
             <DrivingHistoryTable
               rotations={filteredRotations}
               plateByVehicleId={plateByVehicleId}
+              areaLabelByVehicleId={areaLabelByVehicleId}
             />
           </>
         ) : (
           <>
             <ViolationFilterCard
               filter={violationFilter}
-              vehicles={MOCK_VEHICLES}
+              drivers={MOCK_DRIVERS}
+              vehicles={violationAreaVehicles}
+              contentOptions={violationContentFilterOptions}
               onChange={patchViolationFilter}
             />
+
+            <KpiCardsGrid items={violationKpiItems} />
 
             <div className="flex justify-end">
               <PrimaryButton onClick={openCreateForm}>
@@ -291,8 +312,6 @@ export default function App() {
                 </span>
               </PrimaryButton>
             </div>
-
-            <KpiCardsGrid items={violationKpiItems} className="lg:grid-cols-4" />
 
             <ViolationTable
               violations={filteredViolations}
@@ -307,6 +326,7 @@ export default function App() {
         open={formOpen}
         mode={formMode}
         initialValues={formInitialValues}
+        drivers={MOCK_DRIVERS}
         vehicles={MOCK_VEHICLES}
         contentOptions={contentOptions}
         severityOptions={severityOptions}
@@ -331,9 +351,11 @@ function CardWithTabs({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
       <TabBar activeTab={activeTab} onChange={onTabChange} />
-      <div className="space-y-4 p-4">{children}</div>
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4">
+        <div className="space-y-3">{children}</div>
+      </div>
     </section>
   );
 }

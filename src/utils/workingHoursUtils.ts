@@ -1,4 +1,5 @@
 import { getVehicleById } from "../data/mockData";
+import { formatCumulativeDateRange } from "./dateUtils";
 import type { DailyRotation, DriverWorkingHoursRow, WorkingHoursFilterState } from "../types";
 
 function tripDurationHours(startTime: string, endTime: string): number {
@@ -18,6 +19,16 @@ export function startOfWeek(isoDate: string): string {
 
 export function startOfMonth(isoDate: string): string {
   return `${isoDate.slice(0, 7)}-01`;
+}
+
+export function getWorkingHoursCumulativeRangeLabels(selectedDate: string) {
+  const weekStart = startOfWeek(selectedDate);
+  const monthStart = startOfMonth(selectedDate);
+
+  return {
+    weekly: formatCumulativeDateRange(weekStart, selectedDate),
+    monthly: formatCumulativeDateRange(monthStart, selectedDate),
+  };
 }
 
 export function formatWorkingHours(hours: number): string {

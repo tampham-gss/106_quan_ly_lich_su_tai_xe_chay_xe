@@ -347,7 +347,7 @@ export default function App() {
               onChange={patchWorkingHoursFilter}
             />
 
-            <WorkingHoursTable rows={workingHoursRows} />
+            <WorkingHoursTable rows={workingHoursRows} selectedDate={workingHoursFilter.date} />
           </>
         )}
       </CardWithTabs>

@@ -24,6 +24,19 @@ export function formatViDate(isoDate: string): string {
   return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
 }
 
+export function formatViDateShort(isoDate: string): string {
+  if (!isoDate) return "";
+
+  const [year, month, day] = isoDate.split("-");
+  if (!year || !month || !day) return isoDate;
+
+  return `${Number(day)}/${Number(month)}/${year}`;
+}
+
+export function formatCumulativeDateRange(startDate: string, endDate: string): string {
+  return `(ngày ${formatViDateShort(startDate)} - ${formatViDateShort(endDate)})`;
+}
+
 export function parseViDate(viDate: string): string | null {
   const match = viDate.trim().match(VI_DATE_PATTERN);
   if (!match) return null;
